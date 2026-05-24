@@ -32,6 +32,20 @@ def home():
 
 @app.get("/recommend")
 def recommend(city: str, property_type: str, bhk: int, max_budget: float):
+    
+    # Validate property type
+    valid_types = ["Apartment", "Villa", "Independent House"]
+    if property_type not in valid_types:
+        return {"error": f"Invalid property_type. Choose from: {valid_types}"}
+
+    # Validate BHK
+    if bhk < 1 or bhk > 5:
+        return {"error": "BHK must be between 1 and 5"}
+
+    # Validate budget
+    if max_budget <= 0:
+        return {"error": "Budget must be greater than 0"}
+
     filtered = df[
         (df["City"].str.lower() == city.lower()) &
         (df["Property_Type"].str.lower() == property_type.lower()) &
@@ -40,7 +54,8 @@ def recommend(city: str, property_type: str, bhk: int, max_budget: float):
     ]
 
     if filtered.empty:
-        return {"message": "No properties found matching your criteria"}
+        return {"message": "No properties found matching your criteria", 
+                "tip": "Try increasing your budget or changing filters"}
 
     top5 = filtered.sort_values("Price_in_Lakhs").head(5)
 
@@ -60,7 +75,6 @@ def recommend(city: str, property_type: str, bhk: int, max_budget: float):
         })
 
     return {"total_found": len(filtered), "showing": 5, "properties": results}
-
 
 @app.get("/predict-price")
 def predict_price(property_type: str, bhk: int, size_sqft: float, furnished_status: str):
