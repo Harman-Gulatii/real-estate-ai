@@ -20,7 +20,7 @@ function App() {
 
     try {
       const response = await fetch(
-        `http://127.0.0.1:8000/recommend?city=${city}&property_type=${propertyType}&bhk=${bhk}&max_budget=${budget}`
+        `https://real-estate-ai-4j59.onrender.com/recommend?city=${city}&property_type=${propertyType}&bhk=${bhk}&max_budget=${budget}`
       );
       const data = await response.json();
       setResults(data);
