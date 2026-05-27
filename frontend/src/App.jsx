@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+const API = "https://real-estate-ai-4j59.onrender.com";
 
 function App() {
   const [city, setCity] = useState("");
@@ -8,6 +10,22 @@ function App() {
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [history, setHistory] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
+
+  useEffect(() => {
+    fetchHistory();
+  }, []);
+
+  const fetchHistory = async () => {
+    try {
+      const response = await fetch(`${API}/history`);
+      const data = await response.json();
+      setHistory(data.history || []);
+    } catch (err) {
+      console.log("Could not load history");
+    }
+  };
 
   const handleSearch = async () => {
     if (!city || !budget) {
@@ -20,10 +38,11 @@ function App() {
 
     try {
       const response = await fetch(
-        `https://real-estate-ai-4j59.onrender.com/recommend?city=${city}&property_type=${propertyType}&bhk=${bhk}&max_budget=${budget}`
+        `${API}/recommend?city=${city}&property_type=${propertyType}&bhk=${bhk}&max_budget=${budget}`
       );
       const data = await response.json();
       setResults(data);
+      fetchHistory();
     } catch (err) {
       setError("Could not connect to API. Make sure FastAPI is running.");
     }
@@ -96,6 +115,28 @@ function App() {
         {error && <p style={{ color: "red", marginTop: "12px" }}>{error}</p>}
       </div>
 
+      {/* History Section */}
+      <div style={{ marginTop: "32px" }}>
+        <button
+          onClick={() => setShowHistory(!showHistory)}
+          style={{ background: "none", border: "1px solid #ddd", padding: "8px 16px", borderRadius: "8px", cursor: "pointer", fontSize: "14px" }}
+        >
+          {showHistory ? "Hide" : "Show"} Recent Searches ({history.length})
+        </button>
+
+        {showHistory && history.length > 0 && (
+          <div style={{ marginTop: "16px", background: "#f9f9f9", borderRadius: "12px", padding: "16px" }}>
+            {history.map((h, i) => (
+              <div key={i} style={{ padding: "10px 0", borderBottom: "1px solid #eee", fontSize: "13px", color: "#555" }}>
+                🔍 <strong>{h.city}</strong> — {h.property_type}, {h.bhk} BHK, ₹{h.max_budget} Lakhs → {h.results_found} results found
+                <span style={{ float: "right", color: "#aaa" }}>{new Date(h.searched_at).toLocaleDateString()}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Results Section */}
       {results && (
         <div style={{ marginTop: "32px" }}>
           {results.message ? (

@@ -5,6 +5,14 @@ from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import LabelEncoder
 import numpy as np
 
+from supabase import create_client, Client
+from datetime import datetime, timezone
+
+# Supabase connection
+SUPABASE_URL = "https://izwvmgzxzyzgtnbeqgff.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6d3ZtZ3p4enl6Z3RuYmVxZ2ZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3MDI1NzQsImV4cCI6MjA5NTI3ODU3NH0.sAbgUYDlCcrzAo1XBLOt0ClWPZkDQrW4F7ltH2OM5ds"
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
 app = FastAPI()
 
 # Allow frontend to talk to backend
@@ -82,7 +90,18 @@ def recommend(city: str, property_type: str, bhk: int, max_budget: float):
             "amenities": row["Amenities"],
             "availability": row["Availability_Status"]
         })
-
+    # Save search to Supabase
+    try:
+        supabase.table("search_history").insert({
+            "city": city,
+            "property_type": property_type,
+            "bhk": bhk,
+            "max_budget": max_budget,
+            "results_found": len(filtered),
+            "searched_at": datetime.now(timezone.utc).isoformat()
+        }).execute()
+    except Exception as e:
+        print(f"Could not save to database: {e}")
     return {"total_found": len(filtered), "showing": 5, "properties": results}
 
 @app.get("/predict-price")
@@ -103,3 +122,11 @@ def predict_price(property_type: str, bhk: int, size_sqft: float, furnished_stat
         "furnished_status": furnished_status,
         "predicted_price_in_lakhs": round(predicted_price, 2)
     }
+@app.get("/history")
+def get_history():
+    try:
+        response = supabase.table("search_history").select("*").order("searched_at", desc=True).limit(10).execute()
+        return {"history": response.data}
+    except Exception as e:
+        return {"error": str(e)}
+    
